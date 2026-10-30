@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#061017">
+  <title>Skyline Vector | Cesium Flight Simulator</title>
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Widgets/widgets.css">
+  <script src="/static/cesium-config.js"></script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.146/Build/Cesium/Cesium.js"></script>
+  <style>
+    :root { --ink: #e5fff0; --muted: #9cc8b1; --accent: #7df2b4; --edge: rgba(139,238,183,.22); --glass: rgba(3,16,23,.8); --warn: #ffd485; }
+    * { box-sizing: border-box; } html,body,#cesiumContainer { width:100%; height:100%; margin:0; overflow:hidden; background:#061017; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .cesium-viewer-bottom { left:0!important; right:auto!important; } #hud { position:fixed; inset:0; z-index:5; pointer-events:none; color:var(--ink); letter-spacing:.06em; text-shadow:0 1px 8px #000; }
+    .glass { background:linear-gradient(135deg,rgba(7,28,35,.86),var(--glass)); border:1px solid var(--edge); box-shadow:0 14px 38px rgba(0,0,0,.25),inset 0 0 28px rgba(66,196,145,.035); backdrop-filter:blur(9px); }
+    .brand { position:absolute; top:24px; left:26px; display:flex; align-items:center; gap:11px; }.mark { width:27px; height:27px; border:2px solid var(--accent); transform:rotate(45deg); box-shadow:0 0 15px rgba(125,242,180,.4); }.brand b { display:block; font-size:13px; letter-spacing:.2em; }.brand span,.eyebrow { color:var(--muted); font-size:8px; letter-spacing:.15em; }
+    #flight-panel { position:absolute; top:24px; right:26px; width:242px; padding:14px 15px; }.flight-name { margin:5px 0 10px; color:#fff; font-weight:800; font-size:12px; letter-spacing:.1em; }.state-line { display:flex; justify-content:space-between; font:10px/1.8 "Cascadia Mono",ui-monospace,monospace; color:#b8e7ca; }.state-line b { color:#fff; font-weight:700; }
+    #readouts { position:absolute; left:26px; bottom:28px; display:grid; grid-template-columns:repeat(2,128px); overflow:hidden; }.readout { min-height:61px; padding:10px 12px; border-right:1px solid var(--edge); border-bottom:1px solid var(--edge); }.readout:nth-child(2n) { border-right:0; }.readout:nth-child(n+3) { border-bottom:0; }.readout span { display:block; }.readout-label { color:var(--muted); font-size:8px; }.readout-value { margin-top:4px; color:#fff; font:650 20px/1 "Cascadia Mono",ui-monospace,monospace; letter-spacing:-.05em; }.unit { color:var(--muted); font-size:8px; }
+    #command-panel { position:absolute; top:139px; right:26px; width:242px; pointer-events:auto; } #airport-search { display:flex; margin-bottom:8px; } input { min-width:0; width:100%; padding:9px 10px; color:#ecfff3; background:rgba(2,12,18,.88); border:1px solid var(--edge); outline:0; font:10px "Cascadia Mono",ui-monospace,monospace; letter-spacing:.04em; } input:focus { border-color:var(--accent); } button { border:1px solid var(--edge); color:#c7f2d5; background:rgba(4,22,29,.85); padding:8px 10px; font:700 8px Inter,sans-serif; letter-spacing:.1em; cursor:pointer; } button:hover,button.active { color:#06130e; background:var(--accent); } #airport-search button { border-left:0; }.grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }.grid button:last-child { grid-column:span 2; } #search-results { max-height:205px; margin-top:8px; overflow:auto; }.result { width:100%; margin-top:4px; padding:8px 9px; text-align:left; font-size:8px; }.result strong { display:block; color:#fff; font-size:9px; margin-bottom:3px; }.result em { color:var(--muted); font-style:normal; }
+    #status { position:absolute; bottom:28px; right:26px; width:242px; padding:12px 14px; color:#bfead0; font:9px/1.5 "Cascadia Mono",ui-monospace,monospace; }.dot { display:inline-block; width:7px; height:7px; margin-right:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 9px var(--accent); }.warning .dot { background:var(--warn); box-shadow:0 0 9px var(--warn); } #tip { position:absolute; top:25px; left:50%; transform:translateX(-50%); color:rgba(232,255,240,.9); text-align:center; font-size:9px; line-height:1.7; }.key { color:var(--accent); } #toast { position:absolute; top:17%; left:50%; transform:translate(-50%,-12px); opacity:0; transition:opacity .2s,transform .2s; color:#f1fff5; font-size:11px; font-weight:800; letter-spacing:.15em; white-space:nowrap; }.show { opacity:1!important; transform:translate(-50%,0)!important; }
+    #loading { position:fixed; z-index:15; inset:0; display:grid; place-items:center; color:#ddffea; background:#061017; font-size:11px; font-weight:800; letter-spacing:.18em; transition:opacity .5s; }.loading-detail { display:block; margin-top:9px; color:var(--muted); font-size:8px; font-weight:500; text-align:center; } #welcome { position:absolute; left:50%; top:50%; width:min(420px,calc(100vw - 36px)); padding:23px; transform:translate(-50%,-50%); text-align:center; pointer-events:auto; transition:opacity .25s; }.hidden { opacity:0; pointer-events:none; }.hidden * { pointer-events:none; } #welcome h1 { margin:7px 0 11px; color:#fff; font-size:clamp(25px,4vw,37px); letter-spacing:.14em; }.welcome-copy { margin:0 0 18px; color:#c1e8d0; font-size:11px; line-height:1.7; letter-spacing:.03em; }.welcome-note { margin:11px 0 0; color:var(--muted); font-size:8px; line-height:1.5; } #begin { padding:10px 18px; color:#06170e; background:var(--accent); border:0; }
+    @media(max-width:760px) { .brand { left:15px; top:14px; }.brand span { display:none; } #flight-panel { right:15px; top:14px; width:170px; padding:9px; }.flight-name { font-size:9px; } #command-panel { display:none; } #readouts { left:15px; bottom:15px; grid-template-columns:repeat(2,96px); }.readout { min-height:52px; padding:8px; }.readout-value { font-size:15px; } #status { display:none; } #tip { top:83px; width:240px; } }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer" aria-label="3D world flight simulator"></div>
+  <div id="loading">INITIALIZING WORLD<span class="loading-detail">loading Cesium, local aircraft and botanical assets</span></div>
+  <main id="hud">
+    <div class="brand"><i class="mark"></i><div><b>SKYLINE VECTOR</b><span>GLOBAL CESIUM FLIGHT RANGE</span></div></div>
+    <section id="flight-panel" class="glass"><div class="eyebrow">ACTIVE AIRCRAFT</div><div id="aircraft-name" class="flight-name">LOADING MODEL CATALOG</div><div class="state-line"><span>IMAGERY</span><b id="biome-readout">ESRI SATELLITE</b></div><div class="state-line"><span>AIRPORTS IN VIEW</span><b id="airport-count">—</b></div><div class="state-line"><span>MAPPED VEGETATION</span><b id="foliage-count">—</b></div><div class="state-line"><span>GRASS TUFTS</span><b id="grass-count">—</b></div><div class="state-line"><span>3D BUILDINGS</span><b id="building-count">—</b></div></section>
+    <section id="readouts" class="glass"><div class="readout"><span class="readout-label">AIRSPEED</span><span class="readout-value" id="speed">000</span><span class="unit"> KTS</span></div><div class="readout"><span class="readout-label">ALTITUDE</span><span class="readout-value" id="altitude">0000</span><span class="unit"> FT MSL</span></div><div class="readout"><span class="readout-label">HEADING</span><span class="readout-value" id="heading">000</span><span class="unit"> DEG</span></div><div class="readout"><span class="readout-label">VERTICAL SPEED</span><span class="readout-value" id="vspeed">+000</span><span class="unit"> FPM</span></div></section>
+    <section id="command-panel" class="glass"><form id="airport-search"><input id="airport-query" autocomplete="off" placeholder="ICAO, IATA, airport or city"><button>FIND</button></form><div class="grid"><button id="follow" class="active">CAMERA: CHASE</button><button id="regrow">LOAD REAL SCENE</button><button id="buildings" class="active">3D BUILDINGS: ON</button><button id="airports">REFRESH AIRPORTS</button><button id="pause">PAUSE FLIGHT</button></div><div id="search-results"></div></section>
+    <section id="status" class="glass"><div id="status-main"><i class="dot"></i>BOOTING LOCAL TELEMETRY</div><div id="status-detail">Airport index and local model catalog are loading.</div></section>
+    <div id="tip"><span class="key">ARROWS / A D</span> PITCH / BANK &nbsp; <span class="key">W / S</span> THROTTLE &nbsp; <span class="key">P</span> PAUSE<br><span class="key">C</span> CAMERA MODE &nbsp; <span class="key">R</span> REGROW BIOME</div><div id="toast"></div>
+    <section id="welcome" class="glass"><div class="eyebrow">WORLD FLIGHT / MAPPED LOCAL SCENE</div><h1>SKYLINE VECTOR</h1><p class="welcome-copy">Fly a local GLB aircraft over satellite imagery. Trees, shrubs, rocks, water footprints, and building footprints load from their mapped OpenStreetMap coordinates around each destination; they are not randomly scattered.</p><button id="begin">BEGIN FLIGHT</button><p class="welcome-note" id="terrain-note">A Cesium ion browser token additionally enables World Terrain, terrain water masks, and globally streamed Cesium OSM Buildings.</p></section>
+  </main>
+  <script>
+  (async () => {
+    'use strict';
+    const $ = (id) => document.getElementById(id); const ui = { loading:$('loading'),welcome:$('welcome'),toast:$('toast'),aircraft:$('aircraft-name'),biome:$('biome-readout'),airportCount:$('airport-count'),foliageCount:$('foliage-count'),grassCount:$('grass-count'),buildingCount:$('building-count'),speed:$('speed'),altitude:$('altitude'),heading:$('heading'),vspeed:$('vspeed'),statusMain:$('status-main'),statusDetail:$('status-detail'),results:$('search-results'),terrainNote:$('terrain-note') };
+    let runtimeConfig={};try{const response=await fetch('/api/runtime-config',{cache:'no-store'});if(response.ok)runtimeConfig=await response.json();}catch(_){} const token=(runtimeConfig.cesiumIonToken||window.CESIUM_ION_TOKEN||'').trim(),hasIon=token.length>0;if(hasIon)Cesium.Ion.defaultAccessToken=token;
+    const viewer=new Cesium.Viewer('cesiumContainer',{baseLayer:false,animation:false,timeline:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false,shouldAnimate:true});
+    viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',credit:new Cesium.Credit('Tiles © Esri',true)})); viewer.scene.globe.enableLighting=hasIon; viewer.scene.globe.showGroundAtmosphere=true; viewer.scene.highDynamicRange=false; viewer.resolutionScale=Math.min(window.devicePixelRatio||1,1.25); viewer.camera.percentageChanged=.01;
+    const escapeHtml=(value)=>String(value).replace(/[&<>'"]/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    const setStatus=(title,detail,warning=false)=>{ui.statusMain.innerHTML=`<i class="dot"></i>${escapeHtml(title)}`;ui.statusMain.classList.toggle('warning',warning);ui.statusDetail.textContent=detail;};
+    let ionBuildingsTileset=null; if(hasIon){try{const terrain=Cesium.Terrain.fromWorldTerrain({requestWaterMask:true,requestVertexNormals:true});viewer.scene.setTerrain(terrain);terrain.readyEvent.addEventListener(()=>setStatus('WORLD TERRAIN + WATER MASKS ACTIVE','Cesium ion terrain lighting and water effects are enabled.'));terrain.errorEvent.addEventListener(()=>setStatus('TERRAIN FALLBACK','World Terrain was unavailable; the globe remains flyable.',true));Cesium.createOsmBuildingsAsync({scene:viewer.scene}).then((tiles)=>{ionBuildingsTileset=viewer.scene.primitives.add(tiles);if(buildingsVisible)buildingSource.show=false;ui.buildingCount.textContent='GLOBAL';}).catch(()=>{});ui.terrainNote.textContent='World Terrain, terrain lighting, water masks, and globally streamed OSM Buildings are enabled for this session.';}catch(_){setStatus('TERRAIN FALLBACK','Unable to initialize World Terrain.',true);}}else{ui.terrainNote.textContent='Esri satellite imagery and mapped OSM scene data are active. Add an ion browser token for World Terrain, terrain water masks, and global Cesium OSM Buildings.';}
+    const airportSource=new Cesium.CustomDataSource('world-airports'),foliageSource=new Cesium.CustomDataSource('mapped-vegetation'),grassSource=new Cesium.CustomDataSource('mapped-grass'),buildingSource=new Cesium.CustomDataSource('mapped-buildings'),waterSource=new Cesium.CustomDataSource('mapped-water');viewer.dataSources.add(airportSource);viewer.dataSources.add(foliageSource);viewer.dataSources.add(grassSource);viewer.dataSources.add(buildingSource);viewer.dataSources.add(waterSource);
+    const keys=new Set(),flight={lat:47.4489,lon:-122.3094,altitude:740,speed:71,throttle:.62,heading:0,pitch:.025,bank:0,verticalSpeed:0,paused:true,started:false,follow:true}; let catalog=null,aircraft=null,aircraftRecord=null,airportRequest=0,airportTimer=0,toastTimer=0,lastFrame=performance.now(),lastTelemetry=0,buildingsVisible=true; const clamp=(n,low,high)=>Math.max(low,Math.min(high,n)),degrees=Cesium.Math.toDegrees,radians=Cesium.Math.toRadians;
+    const showToast=(message)=>{ui.toast.textContent=message;ui.toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove('show'),2600);}; const formatAirport=(airport)=>`${airport.ident}${airport.iata?` / ${airport.iata}`:''} — ${airport.name}`;
+    function flightPosition(){return Cesium.Cartesian3.fromDegrees(flight.lon,flight.lat,flight.altitude);} function flightOrientation(){return Cesium.Transforms.headingPitchRollQuaternion(flightPosition(),new Cesium.HeadingPitchRoll(Math.PI/2-flight.heading,flight.pitch,-flight.bank));} function updatePlane(){if(!aircraft)return;aircraft.position=flightPosition();aircraft.orientation=flightOrientation();}
+    function updateHud(){const knots=Math.round(flight.speed*1.94384),feet=Math.max(0,Math.round(flight.altitude*3.28084));ui.speed.textContent=String(knots).padStart(3,'0');ui.altitude.textContent=String(feet).padStart(4,'0');ui.heading.textContent=String(Math.round((degrees(flight.heading)+360)%360)).padStart(3,'0');ui.vspeed.textContent=`${flight.verticalSpeed>=0?'+':''}${Math.round(flight.verticalSpeed*196.85)}`;ui.biome.textContent='ESRI SATELLITE';}
+    function updateFlight(dt){if(!flight.started||flight.paused)return;const rollInput=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),pitchInput=(keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0),throttleInput=(keys.has('KeyW')?1:0)-(keys.has('KeyS')?1:0);flight.throttle=clamp(flight.throttle+throttleInput*dt*.25,0,1);flight.bank=clamp(flight.bank+rollInput*dt*1.05-flight.bank*dt*.42,-1.05,1.05);flight.pitch=clamp(flight.pitch+pitchInput*dt*.45-flight.pitch*dt*.21,-.39,.39);const targetSpeed=31+flight.throttle*113;flight.speed=clamp(flight.speed+(targetSpeed-flight.speed)*dt*.31-Math.abs(flight.bank)*flight.speed*dt*.012,28,145);const desiredVerticalSpeed=Math.sin(flight.pitch)*flight.speed*.74;flight.verticalSpeed+=(desiredVerticalSpeed-flight.verticalSpeed)*Math.min(1,dt*3.1);flight.altitude=Math.max(60,flight.altitude+flight.verticalSpeed*dt);flight.heading=(flight.heading+Math.sin(flight.bank)*(flight.speed/103)*dt+Math.PI*2)%(Math.PI*2);const north=Math.cos(flight.heading)*flight.speed*dt,east=Math.sin(flight.heading)*flight.speed*dt;flight.lat=clamp(flight.lat+north/111320,-85,85);flight.lon+=east/(111320*Math.max(.08,Math.cos(radians(flight.lat))));if(flight.lon>180)flight.lon-=360;if(flight.lon<-180)flight.lon+=360;updatePlane();updateHud();}
+    function beginFlight(){flight.started=true;flight.paused=false;ui.welcome.classList.add('hidden');$('pause').textContent='PAUSE FLIGHT';setFollow(true);showToast('CLEARED FOR WORLD FLIGHT');} function togglePause(){if(!flight.started)return beginFlight();flight.paused=!flight.paused;$('pause').textContent=flight.paused?'RESUME FLIGHT':'PAUSE FLIGHT';showToast(flight.paused?'FLIGHT PAUSED':'FLIGHT RESUMED');} function setFollow(enabled){flight.follow=enabled;viewer.trackedEntity=enabled?aircraft:undefined;$('follow').classList.toggle('active',enabled);$('follow').textContent=enabled?'CAMERA: CHASE':'CAMERA: FREE';} function resetView(){viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(flight.lon,flight.lat,Math.max(1800,flight.altitude+1000)),orientation:{heading:Math.PI/2-flight.heading,pitch:radians(-23),roll:0},duration:1.2});}
+    function waterMaterial(){return new Cesium.Material({fabric:{type:'Water',uniforms:{normalMap:Cesium.buildModuleUrl('Assets/Textures/waterNormals.jpg'),frequency:650,animationSpeed:.012,amplitude:5,specularIntensity:.75,baseWaterColor:new Cesium.Color(.02,.18,.24,.73),blendColor:new Cesium.Color(.04,.48,.55,.45)}}});}
+    function stablePick(models,key){let value=2166136261;for(const char of String(key))value=Math.imul(value^char.charCodeAt(0),16777619);return models[Math.abs(value) % models.length];} function treeModelFor(item){const all=catalog.foliage,text=`${item.genus||''} ${item.species||''} ${item.leaf_type||''} ${item.leaf_cycle||''}`.toLowerCase(),byId=(id)=>all.find((model)=>model.id===id),pick=(ids)=>stablePick(ids.map(byId).filter(Boolean),item.id);if(item.kind==='shrub')return stablePick(all.filter((model)=>model.category==='bush'&&model.subtype!=='grass'),item.id);if(item.kind==='rock')return stablePick(all.filter((model)=>model.category==='rock'),item.id);if(/palm|arecaceae/.test(text))return byId('palm_tropical');if(/salix|willow/.test(text))return byId('weeping_willow');if(/acer|maple/.test(text))return byId('oak_broadleaf');if(/betula|birch/.test(text))return byId('birch_cluster');if(/sequoia|redwood/.test(text))return byId('giant_redwood');if(/pinus|picea|abies|conifer|needle/.test(text))return pick(['web_tree_1','web_tree_3','pine_tall','giant_redwood']);return pick(['web_tree_2','web_tree_4','oak_broadleaf','birch_cluster']);}
+    function pointScale(item,model){const mappedHeight=Number(item.height_m)||model.target_size_m;return clamp(model.base_scale*(mappedHeight/model.target_size_m),model.base_scale*.3,model.base_scale*2.8);}
+    function footprintPositions(footprint){return Cesium.Cartesian3.fromDegreesArray(footprint.flat());} function pointInsidePolygon(point,polygon){let inside=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j],cross=(a[1]>point[1])!==(b[1]>point[1])&&point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0];if(cross)inside=!inside;}return inside;} function polygonPlacements(area,areaPerInstance,min,max){const bounds=area.footprint.reduce((box,[lon,lat])=>({west:Math.min(box.west,lon),east:Math.max(box.east,lon),south:Math.min(box.south,lat),north:Math.max(box.north,lat)}),{west:Infinity,east:-Infinity,south:Infinity,north:-Infinity}),latitude=(bounds.south+bounds.north)/2,areaM2=Math.abs(area.footprint.reduce((sum,[lon,lat],i)=>{const next=area.footprint[(i+1)%area.footprint.length];return sum+(lon*next[1]-next[0]*lat);},0))*0.5*111320*111320*Math.cos(radians(latitude)),wanted=clamp(Math.round(areaM2/areaPerInstance),min,max),positions=[];let seed=0;for(const char of area.id)seed=(Math.imul(seed,31)+char.charCodeAt(0))>>>0;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};for(let attempt=0;attempt<wanted*9&&positions.length<wanted;attempt++){const point=[bounds.west+(bounds.east-bounds.west)*random(),bounds.south+(bounds.north-bounds.south)*random()];if(pointInsidePolygon(point,area.footprint))positions.push({lon:point[0],lat:point[1],scale:.68+random()*.52,heading:random()*Math.PI*2});}return positions;} function grassPlacements(area){return polygonPlacements(area,130,10,95);} function forestPlacements(area){return polygonPlacements(area,360,6,80);}
+    async function loadRealWorldScene(fresh=false){try{setStatus('LOADING MAPPED WORLD SCENE','Requesting real OSM vegetation, forest canopy, grass, water, and building footprints around the aircraft.');const query=new URLSearchParams({lat:flight.lat.toFixed(6),lon:flight.lon.toFixed(6),radius_m:'700',fresh:String(fresh)}),response=await fetch(`/api/real-world-scene?${query}`);if(!response.ok)throw Error();const scene=await response.json(),grassModel=catalog.foliage.find((model)=>model.id==='grass_tuft');foliageSource.entities.removeAll();grassSource.entities.removeAll();buildingSource.entities.removeAll();waterSource.entities.removeAll();let treeCount=0,esaKept=0;for(const item of scene.vegetation){if(item.source==='esa_worldcover_2021_tree_cover'){const dm=Math.hypot((item.lat-flight.lat)*111320,(item.lon-flight.lon)*111320*Math.cos(radians(flight.lat)));if(esaKept>=900||dm>450)continue;esaKept++;}const model=treeModelFor(item);if(!model)continue;foliageSource.entities.add({id:item.id,name:item.species||item.genus||`Mapped ${item.kind}`,position:Cesium.Cartesian3.fromDegrees(item.lon,item.lat,0),model:{uri:model.url,scale:pointScale(item,model),minimumPixelSize:1.5,maximumScale:180,heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,item.source==='esa_worldcover_2021_tree_cover'?1500:10000)}});treeCount++;}for(const area of scene.forest){for(const point of forestPlacements(area)){if(treeCount>=2500)break;const model=treeModelFor({id:`${area.id}-${treeCount}`,kind:'tree'});foliageSource.entities.add({id:`${area.id}-${treeCount}`,name:'Tree in mapped forest canopy',position:Cesium.Cartesian3.fromDegrees(point.lon,point.lat,0),orientation:Cesium.Transforms.headingPitchRollQuaternion(Cesium.Cartesian3.fromDegrees(point.lon,point.lat,0),new Cesium.HeadingPitchRoll(point.heading,0,0)),model:{uri:model.url,scale:model.base_scale*point.scale,minimumPixelSize:2,maximumScale:175,heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,8500)}});treeCount++;}if(treeCount>=2500)break;}let grassCount=0;if(grassModel){for(const area of scene.grass){for(const point of grassPlacements(area)){if(grassCount>=750)break;grassSource.entities.add({id:`${area.id}-${grassCount}`,name:'Mapped grass tuft',position:Cesium.Cartesian3.fromDegrees(point.lon,point.lat,0),orientation:Cesium.Transforms.headingPitchRollQuaternion(Cesium.Cartesian3.fromDegrees(point.lon,point.lat,0),new Cesium.HeadingPitchRoll(point.heading,0,0)),model:{uri:grassModel.url,scale:grassModel.base_scale*point.scale,minimumPixelSize:1,maximumScale:22,heightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,3200)}});grassCount++;}if(grassCount>=750)break;}}for(const item of scene.buildings){window.skylineAddBuilding(item);}for(const item of scene.water){waterSource.entities.add({id:item.id,name:item.name,polygon:{hierarchy:footprintPositions(item.footprint),height:0,material:waterMaterial(),outline:false}});}ui.foliageCount.textContent=treeCount.toLocaleString();ui.grassCount.textContent=grassCount.toLocaleString();if(!ionBuildingsTileset)ui.buildingCount.textContent=scene.buildings.length.toLocaleString();setStatus('MAPPED WORLD SCENE READY',`${scene.vegetation.length.toLocaleString()} exact points plus ${Math.max(0,treeCount-scene.vegetation.length).toLocaleString()} custom GLB trees inside ${scene.forest.length.toLocaleString()} mapped forest zones; ${grassCount.toLocaleString()} grass tufts sit inside mapped grass areas.`);showToast('REAL-WORLD SCENE LOADED');}catch(_){ui.foliageCount.textContent='UNAVAILABLE';ui.grassCount.textContent='UNAVAILABLE';ui.buildingCount.textContent='UNAVAILABLE';setStatus('MAPPED SCENE UNAVAILABLE','OpenStreetMap scene data could not be reached; no procedural foliage was substituted.',true);}}
+    function airportColor(type){return type==='large_airport'?Cesium.Color.fromCssColorString('#ffdc86'):type==='medium_airport'?Cesium.Color.fromCssColorString('#8ff5bf'):type==='seaplane_base'?Cesium.Color.fromCssColorString('#72dfff'):Cesium.Color.fromCssColorString('#c7e6d2');} async function refreshAirports(force=false){const rectangle=viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid);if(!rectangle)return;const width=degrees(rectangle.east>=rectangle.west?rectangle.east-rectangle.west:Math.PI*2-(rectangle.west-rectangle.east)),height=degrees(rectangle.north-rectangle.south);if(!force&&width>155&&height>75){airportSource.entities.removeAll();ui.airportCount.textContent='ZOOM IN';return;}const requestId=++airportRequest;try{const params=new URLSearchParams({west:degrees(rectangle.west).toFixed(5),south:degrees(rectangle.south).toFixed(5),east:degrees(rectangle.east).toFixed(5),north:degrees(rectangle.north).toFixed(5),limit:width>50?'750':'1800'}),response=await fetch(`/api/airports?${params}`);if(!response.ok)throw Error();const data=await response.json();if(requestId!==airportRequest)return;airportSource.entities.removeAll();const labelLimit=width<14?100:30;let labels=0;for(const airport of data.airports){const showLabel=labels<labelLimit&&(airport.type==='large_airport'||airport.type==='medium_airport');if(showLabel)labels++;airportSource.entities.add({id:`airport-${airport.ident}-${airport.lat}-${airport.lon}`,name:formatAirport(airport),position:Cesium.Cartesian3.fromDegrees(airport.lon,airport.lat,0),point:{pixelSize:airport.type==='large_airport'?8:airport.type==='medium_airport'?6:4,color:airportColor(airport.type),outlineColor:Cesium.Color.BLACK,outlineWidth:1,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,1800000)},label:showLabel?{text:airport.ident,font:'10px monospace',fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.BLACK,outlineWidth:3,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(7,-7),distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,850000)}:undefined,properties:{airport}});}ui.airportCount.textContent=data.airports.length.toLocaleString();}catch(_){ui.airportCount.textContent='OFFLINE';setStatus('AIRPORT INDEX OFFLINE','Unable to read the bundled global airport dataset.',true);}}
+    async function searchAirports(query){if(!query.trim())return;ui.results.innerHTML='';try{const response=await fetch(`/api/airports/search?query=${encodeURIComponent(query)}`);if(!response.ok)throw Error();const {airports}=await response.json(),needle=query.trim().toUpperCase();if(!airports.length){ui.results.innerHTML='<div class="result">No matching airports.</div>';return;}const exact=airports.find((airport)=>airport.ident===needle||airport.iata===needle);if(exact){jumpToAirport(exact);return;}for(const airport of airports){const button=document.createElement('button');button.className='result';button.innerHTML=`<strong>${escapeHtml(airport.ident)}${airport.iata?` / ${escapeHtml(airport.iata)}`:''}</strong><em>${escapeHtml(airport.name)} · ${escapeHtml(airport.country||airport.region||'WORLD')}</em>`;button.addEventListener('click',()=>jumpToAirport(airport));ui.results.append(button);}}catch(_){ui.results.innerHTML='<div class="result">Airport search is not available.</div>';}}
+    function jumpToAirport(airport){flight.lat=airport.lat;flight.lon=airport.lon;flight.altitude=Math.max(420,((airport.elevation_ft||0)/3.28084)+420);flight.heading=0;flight.verticalSpeed=0;updatePlane();resetView();loadRealWorldScene();refreshAirports(true);ui.results.innerHTML='';showToast(`POSITIONED: ${airport.ident}`);if(flight.follow)setTimeout(()=>setFollow(true),1300);}
+    async function loadCatalog(){const response=await fetch('/api/catalog');if(!response.ok)throw Error();catalog=await response.json();aircraftRecord=catalog.aircraft.find((item)=>item.id==='supersonic_jet')||catalog.aircraft[0];if(!aircraftRecord)throw Error();aircraft=viewer.entities.add({id:'player-aircraft',name:aircraftRecord.label,position:flightPosition(),orientation:flightOrientation(),viewFrom:new Cesium.Cartesian3(-150,-205,74),model:{uri:aircraftRecord.url,scale:aircraftRecord.base_scale,minimumPixelSize:48,maximumScale:240,runAnimations:true,incrementallyLoadTextures:true,color:Cesium.Color.WHITE}});ui.aircraft.textContent=aircraftRecord.label.toUpperCase();updatePlane();updateHud();}
+    function postTelemetry(now){if(!flight.started||now-lastTelemetry<125)return;lastTelemetry=now;fetch('/telemetry',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({roll_deg:degrees(flight.bank),pitch_deg:degrees(flight.pitch),yaw_deg:degrees(flight.heading),latitude_deg:flight.lat,longitude_deg:flight.lon,altitude_m:flight.altitude})}).catch(()=>{});} function startTelemetryStatus(){setStatus('PYTHON TELEMETRY ACTIVE','Flight state posts directly to the local FastAPI telemetry endpoint.');}
+    function toggleBuildings(){buildingsVisible=!buildingsVisible;buildingSource.show=buildingsVisible;if(ionBuildingsTileset)ionBuildingsTileset.show=buildingsVisible;$('buildings').classList.toggle('active',buildingsVisible);$('buildings').textContent=`3D BUILDINGS: ${buildingsVisible?'ON':'OFF'}`;} $('begin').addEventListener('click',beginFlight);$('follow').addEventListener('click',()=>{setFollow(!flight.follow);if(!flight.follow)resetView();});$('regrow').addEventListener('click',()=>loadRealWorldScene(true));$('buildings').addEventListener('click',toggleBuildings);$('airports').addEventListener('click',()=>refreshAirports(true));$('pause').addEventListener('click',togglePause);$('airport-search').addEventListener('submit',(event)=>{event.preventDefault();searchAirports($('airport-query').value);});
+    window.addEventListener('keydown',(event)=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(event.code))event.preventDefault();keys.add(event.code);if(event.code==='KeyA')keys.add('ArrowLeft');if(event.code==='KeyD')keys.add('ArrowRight');if(!event.repeat&&event.code==='KeyP')togglePause();if(!event.repeat&&event.code==='KeyC')setFollow(!flight.follow);if(!event.repeat&&event.code==='KeyR')loadRealWorldScene(true);if(!flight.started&&(event.code==='Enter'||event.code==='Space'))beginFlight();},{capture:true});window.addEventListener('keyup',(event)=>{keys.delete(event.code);if(event.code==='KeyA')keys.delete('ArrowLeft');if(event.code==='KeyD')keys.delete('ArrowRight');},{capture:true});window.addEventListener('pointerdown',()=>window.focus(),{capture:true});window.addEventListener('blur',()=>keys.clear());viewer.camera.moveEnd.addEventListener(()=>{clearTimeout(airportTimer);airportTimer=setTimeout(()=>refreshAirports(),180);});viewer.clock.onTick.addEventListener(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;updateFlight(dt);postTelemetry(now);});
+    forestPlacements=(area)=>polygonPlacements(area,12,320,800);const populateRealWorldScene=loadRealWorldScene;loadRealWorldScene=async(...args)=>{await populateRealWorldScene(...args);const entities=foliageSource.entities.values.filter((entity)=>entity.model&&entity.position),date=Cesium.JulianDate.now(),cartographics=entities.map((entity)=>Cesium.Cartographic.fromCartesian(entity.position.getValue(date)));for(const entity of entities){entity.model.minimumPixelSize=8;entity.model.maximumScale=220;entity.model.distanceDisplayCondition=new Cesium.DistanceDisplayCondition(0,12000);}try{const terrain=viewer.scene.terrainProvider||viewer.terrainProvider,samples=await Cesium.sampleTerrainMostDetailed(terrain,cartographics);for(let index=0;index<entities.length;index++){const point=samples[index];entities[index].position=Cesium.Cartesian3.fromRadians(point.longitude,point.latitude,Math.max(0,point.height||0));entities[index].model.heightReference=Cesium.HeightReference.NONE;}}catch(_){for(const entity of entities)entity.model.heightReference=Cesium.HeightReference.CLAMP_TO_GROUND;}};(async()=>{try{await loadCatalog();await loadRealWorldScene();resetView();refreshAirports(true);startTelemetryStatus();ui.loading.style.opacity='0';setTimeout(()=>ui.loading.remove(),520);}catch(_){ui.loading.innerHTML='STARTUP ERROR<span class="loading-detail">Run the simulator through the local Python server so its model and world-data APIs are available.</span>';setStatus('STARTUP ERROR','The local API or model catalog could not be loaded.',true);}})();
+    const sceneStatusLoader=loadRealWorldScene;loadRealWorldScene=async(...args)=>{await sceneStatusLoader(...args);ui.statusDetail.textContent=ui.statusDetail.textContent.replace('exact points','ESA WorldCover Tree Cover points');};
+    let sceneCenter={lat:flight.lat,lon:flight.lon},sceneIsLoading=false;const sceneDistance=(from,to)=>Math.hypot((to.lat-from.lat)*111320,(to.lon-from.lon)*111320*Math.cos(radians(to.lat)));const streamedSceneLoader=loadRealWorldScene;loadRealWorldScene=async(...args)=>{sceneIsLoading=true;try{await streamedSceneLoader(...args);sceneCenter={lat:flight.lat,lon:flight.lon};}finally{sceneIsLoading=false;}};viewer.clock.onTick.addEventListener(()=>{if(flight.started&&!sceneIsLoading&&sceneDistance(sceneCenter,flight)>500)loadRealWorldScene();});
+    const farTrees=viewer.scene.primitives.add(new Cesium.BillboardCollection({scene:viewer.scene}));const farTreeImage=(()=>{const c=document.createElement('canvas');c.width=64;c.height=80;const g=c.getContext('2d');g.fillStyle='#4a3a28';g.fillRect(29,56,6,22);for(const b of [[32,26,22,'#2f5d2a'],[22,38,16,'#3a6e32'],[42,38,16,'#2b5326'],[32,40,18,'#356a30']]){g.fillStyle=b[3];g.beginPath();g.arc(b[0],b[1],b[2],0,Math.PI*2);g.fill();}return c.toDataURL('image/png');})();let farCenter=null,farLoading=false;async function loadFarTrees(){if(farLoading)return;farLoading=true;farCenter={lat:flight.lat,lon:flight.lon};try{const q=new URLSearchParams({lat:flight.lat.toFixed(5),lon:flight.lon.toFixed(5),radius_m:'9000',max_points:'25000'});const r=await fetch(`/api/far-trees?${q}`);if(!r.ok)return;const data=await r.json(),pts=data.points||[];const flat=viewer.scene.terrainProvider instanceof Cesium.EllipsoidTerrainProvider,hr=flat?Cesium.HeightReference.NONE:Cesium.HeightReference.CLAMP_TO_GROUND,cosLat=Math.cos(radians(flight.lat));farTrees.removeAll();for(let i=0;i+1<pts.length;i+=2){const lon=pts[i],lat=pts[i+1];if(Math.hypot((lat-flight.lat)*111320,(lon-flight.lon)*111320*cosLat)<450)continue;farTrees.add({position:Cesium.Cartesian3.fromDegrees(lon,lat,0),image:farTreeImage,width:30,height:38,sizeInMeters:true,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,heightReference:hr});}}catch(_){}finally{farLoading=false;}}viewer.clock.onTick.addEventListener(()=>{if(!farLoading&&(!farCenter||sceneDistance(farCenter,flight)>2000))loadFarTrees();});
+/* >>> SKYLINE_EXT_BEGIN */
+{
+const sleep=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
+const G=9.80665,TAU=Math.PI*2,GEAR_HEIGHT=1.6,FEET=3.28084;
+const PLANE={wingLoading:250,clMax:1.3,clSlope:5,alphaStall:.26,cd0:.026,induced:.11,thrustToWeight:.32};
+Object.assign(flight,{gamma:0,alpha:0,rollRate:0,onGround:false,hold:true,groundHeight:0,stalled:false,crashTimer:0,spawn:null,hinted:true});
+let lastStallToast=0;
+viewer.scene.globe.depthTestAgainstTerrain=hasIon;
+
+/* ---------- flight model: point-mass with lift, drag, thrust, stall and ground roll ---------- */
+const airDensity=(height)=>1.225*Math.exp(-Math.max(0,height)/8500);
+const liftCoefficient=(alpha)=>{const over=Math.abs(alpha)-PLANE.alphaStall;if(over<=0)return PLANE.clSlope*alpha;return Math.sign(alpha)*PLANE.clMax*Math.max(.55,1-over*6);};
+function sampleGround(){if(!hasIon)return 0;const height=viewer.scene.globe.getHeight(new Cesium.Cartographic(radians(flight.lon),radians(flight.lat)));return Number.isFinite(height)?height:flight.groundHeight;}
+async function resolveGround(lat,lon){
+  if(!hasIon)return 0;
+  for(let i=0;i<40&&viewer.scene.terrainProvider instanceof Cesium.EllipsoidTerrainProvider;i++)await sleep(250);
+  try{const [point]=await Cesium.sampleTerrainMostDetailed(viewer.scene.terrainProvider,[new Cesium.Cartographic(radians(lon),radians(lat))]);if(Number.isFinite(point.height))return point.height;}catch(_){}
+  return flight.groundHeight||0;
+}
+function crash(reason){showToast(`${reason} - RESETTING`);flight.crashTimer=2.4;flight.speed=0;flight.throttle=0;}
+function touchdown(floor){
+  const sink=-flight.speed*Math.sin(flight.gamma);
+  if(sink>5.5||Math.abs(flight.bank)>.4||flight.gamma<-.3){crash(sink>5.5?'HARD IMPACT':'CRASHED');return;}
+  Object.assign(flight,{onGround:true,gamma:0,altitude:floor,bank:0,rollRate:0,stalled:false,alpha:clamp(flight.alpha,0,.22)});
+  showToast(sink>3?'HARD LANDING':'TOUCHDOWN');
+}
+function respawn(){
+  if(flight.spawn){placeOnRunway(flight.spawn.airport,flight.spawn.runway);return;}
+  Object.assign(flight,{altitude:flight.groundHeight+300,speed:80,gamma:0,alpha:.08,bank:0,rollRate:0,throttle:.6,onGround:false});
+}
+updateFlight=function(dt){
+  if(!flight.started||flight.paused)return;
+  if(flight.hold){updatePlane();return;}
+  if(flight.crashTimer>0){flight.crashTimer-=dt;if(flight.crashTimer<=0)respawn();updatePlane();updateHud();return;}
+  if(!flight.hinted){flight.hinted=true;if(flight.onGround)showToast('HOLD W FOR POWER - ROTATE WITH UP ARROW AT ~120 KT - B BRAKES');}
+  const rollIn=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),pitchIn=(keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0),throttleIn=(keys.has('KeyW')?1:0)-(keys.has('KeyS')?1:0);
+  flight.throttle=clamp(flight.throttle+throttleIn*dt*.4,0,1);
+  const ground=sampleGround();flight.groundHeight=ground;
+  const floor=ground+GEAR_HEIGHT,rho=airDensity(flight.altitude),speed=flight.speed,q=.5*rho*speed*speed;
+  const thrust=G*PLANE.thrustToWeight*(.04+.96*flight.throttle)*Math.pow(rho/1.225,.75);
+  const wave=.12*Math.pow(Math.max(0,speed-170)/60,2);
+  let alpha=flight.alpha;
+  if(flight.onGround){
+    const authority=clamp((speed-20)/40,0,1);
+    if(pitchIn>0)alpha+=dt*.16*authority;else alpha-=dt*(pitchIn<0?.5:.8);
+    alpha=clamp(alpha,0,.22);
+    const cl=liftCoefficient(alpha),lift=q*cl/PLANE.wingLoading,drag=q*(PLANE.cd0+PLANE.induced*cl*cl+wave)/PLANE.wingLoading;
+    const rolling=(keys.has('KeyB')?.55:.022)*G,accel=thrust-drag;
+    if(speed<.5&&accel<=rolling)flight.speed=0;else flight.speed=Math.max(0,speed+(accel-rolling)*dt);
+    flight.heading=(flight.heading+rollIn*.5*clamp(speed/6,0,1)*clamp(1.15-speed/70,.2,1)*dt+TAU)%TAU;
+    flight.bank-=flight.bank*Math.min(1,dt*6);flight.rollRate=0;flight.gamma=0;flight.altitude=floor;flight.alpha=alpha;
+    if(lift>G*1.02){flight.onGround=false;flight.gamma=.01;flight.altitude=floor+.3;showToast('AIRBORNE');}
+  }else{
+    const bank=flight.bank,cosBank=Math.max(.2,Math.cos(bank));
+    const nTrim=Math.cos(flight.gamma)/cosBank-.8*flight.gamma;
+    const alphaTrim=clamp(nTrim*G*PLANE.wingLoading/(Math.max(q,60)*PLANE.clSlope),-.05,PLANE.alphaStall*.9);
+    const authority=clamp(speed/70,.35,1.2);
+    if(pitchIn!==0)alpha+=pitchIn*dt*.22*authority;else alpha+=(alphaTrim-alpha)*Math.min(1,dt*1.6);
+    if(alpha>PLANE.alphaStall+.02)alpha-=dt*.8;
+    alpha=clamp(alpha,-.14,.36);
+    const cl=liftCoefficient(alpha),lift=clamp(q*cl/PLANE.wingLoading,-4*G,8*G),drag=q*(PLANE.cd0+PLANE.induced*cl*cl+wave)/PLANE.wingLoading;
+    flight.stalled=alpha>PLANE.alphaStall;
+    const effective=Math.max(speed,25);
+    flight.gamma=clamp(flight.gamma+(lift*Math.cos(bank)-G*Math.cos(flight.gamma))/effective*dt,-1.45,1.45);
+    flight.heading=(flight.heading+lift*Math.sin(bank)/(effective*Math.max(.25,Math.cos(flight.gamma)))*dt+TAU)%TAU;
+    flight.speed=Math.max(8,speed+(thrust*Math.cos(alpha)-drag-G*Math.sin(flight.gamma))*dt);
+    flight.altitude+=speed*Math.sin(flight.gamma)*dt;
+    const eff=clamp(speed/75,.25,1.15);
+    flight.rollRate+=(rollIn*1.5*eff-flight.rollRate)*Math.min(1,dt*6);
+    flight.bank=clamp(bank+flight.rollRate*dt,-1.35,1.35);
+    if(rollIn===0&&Math.abs(flight.bank)<.45)flight.bank-=flight.bank*Math.min(1,dt*.35);
+    flight.alpha=alpha;
+    if(flight.stalled&&performance.now()-lastStallToast>4000){lastStallToast=performance.now();showToast('STALL - LOWER THE NOSE');}
+    if(floor-flight.altitude>3)crash('TERRAIN IMPACT');
+    else if(flight.altitude<=floor){if(flight.gamma<=.02)touchdown(floor);else flight.altitude=floor;}
+  }
+  flight.verticalSpeed=flight.onGround?0:flight.speed*Math.sin(flight.gamma);
+  flight.pitch=clamp(flight.gamma+flight.alpha,-1.5,1.5);
+  const horizontal=flight.speed*Math.cos(flight.gamma),north=Math.cos(flight.heading)*horizontal*dt,east=Math.sin(flight.heading)*horizontal*dt;
+  flight.lat=clamp(flight.lat+north/111320,-85,85);flight.lon+=east/(111320*Math.max(.08,Math.cos(radians(flight.lat))));
+  if(flight.lon>180)flight.lon-=360;if(flight.lon<-180)flight.lon+=360;
+  updatePlane();updateHud();
+};
+const baseHud=updateHud;
+updateHud=function(){baseHud();ui.altitude.textContent=String(Math.max(0,Math.round((flight.altitude-flight.groundHeight-GEAR_HEIGHT)*FEET))).padStart(4,'0');};
+
+/* ---------- airport selection: start on a real runway threshold ---------- */
+async function fetchRunways(ident){try{const response=await fetch(`/api/airports/${encodeURIComponent(ident)}/runways`);if(!response.ok)return[];return (await response.json()).runways||[];}catch(_){return[];}}
+async function placeOnRunway(airport,runway){
+  flight.hold=true;
+  Object.assign(flight,{lat:runway.lat,lon:runway.lon,heading:radians(runway.heading_deg),speed:0,throttle:0,gamma:0,alpha:0,bank:0,rollRate:0,verticalSpeed:0,pitch:0,onGround:true,stalled:false,crashTimer:0,hinted:false,spawn:{airport,runway}});
+  const ground=await resolveGround(runway.lat,runway.lon);
+  flight.groundHeight=ground;flight.altitude=ground+GEAR_HEIGHT;
+  updatePlane();updateHud();
+  if(aircraft){aircraft.viewFrom=new Cesium.Cartesian3(-Math.sin(flight.heading)*70,-Math.cos(flight.heading)*70,24);}
+  viewer.trackedEntity=undefined;setFollow(true);
+  loadRealWorldScene();refreshAirports(true);
+  flight.hold=false;
+}
+async function placeAirborne(airport){
+  flight.hold=true;
+  const ground=await resolveGround(airport.lat,airport.lon);
+  Object.assign(flight,{lat:airport.lat,lon:airport.lon,heading:0,groundHeight:ground,altitude:ground+350,speed:85,throttle:.55,gamma:0,alpha:.07,pitch:.07,bank:0,rollRate:0,verticalSpeed:0,onGround:false,stalled:false,crashTimer:0,hinted:true,spawn:null});
+  updatePlane();updateHud();setFollow(true);loadRealWorldScene();refreshAirports(true);
+  flight.hold=false;
+}
+function showRunwayChoices(airport,runways,active){
+  ui.results.innerHTML='';
+  const title=document.createElement('div');title.className='result';title.innerHTML=`<strong>${escapeHtml(airport.ident)} RUNWAYS</strong><em>${escapeHtml(airport.name||'')}</em>`;ui.results.append(title);
+  for(const runway of runways.slice(0,12)){
+    const button=document.createElement('button');button.className='result'+(runway===active?' active':'');
+    button.innerHTML=`<strong>RWY ${escapeHtml(runway.ident)}</strong><em>${Math.round(runway.heading_deg)} deg / ${Math.round(runway.length_m*FEET).toLocaleString()} ft</em>`;
+    button.addEventListener('click',()=>{placeOnRunway(airport,runway).then(()=>showToast(`RUNWAY ${runway.ident} - ${airport.ident}`));});
+    ui.results.append(button);
+  }
+}
+jumpToAirport=async function(airport){
+  ui.results.innerHTML='<div class="result">Loading runways...</div>';
+  const runways=await fetchRunways(airport.ident);
+  if(runways.length){
+    await placeOnRunway(airport,runways[0]);
+    showRunwayChoices(airport,runways,runways[0]);
+    showToast(`${airport.ident} - RUNWAY ${runways[0].ident}`);
+  }else{
+    await placeAirborne(airport);
+    ui.results.innerHTML='';
+    showToast(`NO RUNWAY DATA FOR ${airport.ident} - AIRBORNE START`);
+  }
+};
+const airportClicks=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+airportClicks.setInputAction((event)=>{
+  const picked=viewer.scene.pick(event.position),props=picked&&picked.id&&picked.id.properties;
+  if(!props||!props.airport)return;
+  if(flight.started&&!flight.paused){showToast('PAUSE (P) TO PICK AN AIRPORT ON THE MAP');return;}
+  jumpToAirport(props.airport.getValue(Cesium.JulianDate.now()));
+},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+/* ---------- scene loading: serialise reloads so building textures never race ---------- */
+let buildingEpoch=0,buildingIndex=0,pendingBuildings=[],flushScheduled=false,sceneRunning=false,scenePending=null;
+const baseSceneLoader=loadRealWorldScene;
+loadRealWorldScene=async function(...args){
+  if(sceneRunning){scenePending=args;return;}
+  sceneRunning=true;buildingEpoch++;buildingIndex=0;pendingBuildings=[];
+  try{await baseSceneLoader(...args);clipIonBuildings();}finally{sceneRunning=false;}
+  if(scenePending){const next=scenePending;scenePending=null;return loadRealWorldScene(...next);}
+};
+function clipIonBuildings(){
+  if(!ionBuildingsTileset||!Cesium.ClippingPolygonCollection)return;
+  try{
+    const ring=[],cosLat=Math.max(.05,Math.cos(radians(flight.lat)));
+    for(let i=0;i<24;i++){const a=i/24*TAU;ring.push(flight.lon+Math.cos(a)*650/(111320*cosLat),flight.lat+Math.sin(a)*650/111320);}
+    ionBuildingsTileset.clippingPolygons=new Cesium.ClippingPolygonCollection({polygons:[new Cesium.ClippingPolygon({positions:Cesium.Cartesian3.fromDegreesArray(ring)})]});
+  }catch(_){}
+}
+viewer.clock.onTick.addEventListener(()=>{if(buildingsVisible&&!buildingSource.show)buildingSource.show=true;});
+
+/* ---------- buildings: satellite imagery on the roofs, textured facades on the walls ---------- */
+const TEXTURED_BUILDINGS=140,tileCache=new Map(),roofCache=new Map(),facadeCache=new Map();
+const mix=(a,b,t)=>a.map((v,i)=>Math.round(v*(1-t)+b[i]*t)),rgb=(c)=>`rgb(${c[0]},${c[1]},${c[2]})`;
+const mercator=(lon,lat,z)=>{const size=256*Math.pow(2,z),s=Math.sin(radians(lat));return[(lon+180)/360*size,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*size];};
+function loadTile(z,x,y){
+  const key=`${z}/${x}/${y}`;if(tileCache.has(key))return tileCache.get(key);
+  const promise=(async()=>{const response=await fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,{mode:'cors'});if(!response.ok)throw Error('tile');return createImageBitmap(await response.blob());})();
+  tileCache.set(key,promise);promise.catch(()=>tileCache.delete(key));
+  if(tileCache.size>80)tileCache.delete(tileCache.keys().next().value);
+  return promise;
+}
+async function roofImage(item){
+  if(roofCache.has(item.id))return roofCache.get(item.id);
+  const lons=item.footprint.map((p)=>p[0]),lats=item.footprint.map((p)=>p[1]);
+  const west=Math.min(...lons),east=Math.max(...lons),south=Math.min(...lats),north=Math.max(...lats);
+  let z=19,a=mercator(west,north,z),b=mercator(east,south,z);
+  if(b[0]-a[0]>220||b[1]-a[1]>220){z=18;a=mercator(west,north,z);b=mercator(east,south,z);}
+  const w=Math.max(2,b[0]-a[0]),h=Math.max(2,b[1]-a[1]);
+  const tx0=Math.floor(a[0]/256),tx1=Math.floor(b[0]/256),ty0=Math.floor(a[1]/256),ty1=Math.floor(b[1]/256);
+  if((tx1-tx0+1)*(ty1-ty0+1)>9)return null;
+  const cw=Math.min(128,Math.max(8,Math.round(w))),ch=Math.min(128,Math.max(8,Math.round(h)));
+  const canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;const ctx=canvas.getContext('2d');
+  const jobs=[];
+  for(let tx=tx0;tx<=tx1;tx++)for(let ty=ty0;ty<=ty1;ty++)jobs.push(loadTile(z,tx,ty).then((bitmap)=>ctx.drawImage(bitmap,(tx*256-a[0])*cw/w,(ty*256-a[1])*ch/h,256*cw/w,256*ch/h)));
+  await Promise.all(jobs);
+  const probe=document.createElement('canvas');probe.width=probe.height=1;const pctx=probe.getContext('2d');pctx.drawImage(canvas,0,0,1,1);
+  const d=pctx.getImageData(0,0,1,1).data,result={canvas,color:[d[0],d[1],d[2]]};
+  if(roofCache.size>600)roofCache.delete(roofCache.keys().next().value);
+  roofCache.set(item.id,result);return result;
+}
+function buildingStyle(item){
+  const kind=String(item.name||'').toLowerCase();
+  if(item.height_m>=45)return'glass';
+  if(/house|residential|detached|bungalow|terrace|villa|cabin/.test(kind))return'house';
+  if(/industrial|warehouse|factory|hangar|storage|garage|shed|barn|hall/.test(kind))return'plain';
+  return'office';
+}
+const BAYS={glass:[3,3.9],house:[4.5,2.8],plain:[8,6],office:[6,3.6]};
+function facadeCanvas(style,color){
+  const key=`${style}:${color.map((v)=>Math.round(v/24)).join(',')}`;if(facadeCache.has(key))return facadeCache.get(key);
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const g=canvas.getContext('2d');
+  const wall=style==='glass'?[70,98,120]:mix(color,[205,198,186],.6);
+  g.fillStyle=rgb(wall);g.fillRect(0,0,128,128);
+  const glass=(x,y,w,h)=>{const grad=g.createLinearGradient(x,y,x+w,y+h);grad.addColorStop(0,'#5c7a90');grad.addColorStop(1,'#1f2c37');g.fillStyle=grad;g.fillRect(x,y,w,h);};
+  if(style==='glass'){glass(0,0,128,128);g.strokeStyle='rgba(210,225,235,.55)';g.lineWidth=2;g.strokeRect(1,1,126,126);g.beginPath();g.moveTo(64,0);g.lineTo(64,128);g.stroke();}
+  else if(style==='house'){g.fillStyle='#f2efe6';g.fillRect(32,30,64,70);glass(37,35,54,60);g.strokeStyle='#f2efe6';g.lineWidth=3;g.beginPath();g.moveTo(64,35);g.lineTo(64,95);g.moveTo(37,65);g.lineTo(91,65);g.stroke();}
+  else if(style==='plain'){g.strokeStyle=rgb(mix(wall,[40,40,40],.25));g.lineWidth=2;for(let x=0;x<128;x+=16){g.beginPath();g.moveTo(x,0);g.lineTo(x,128);g.stroke();}glass(8,14,112,22);}
+  else{g.fillStyle=rgb(mix(wall,[255,255,255],.35));g.fillRect(16,22,96,80);glass(20,26,88,70);g.strokeStyle=rgb(mix(wall,[30,30,30],.35));g.lineWidth=3;g.beginPath();g.moveTo(64,26);g.lineTo(64,96);g.stroke();}
+  g.fillStyle='rgba(0,0,0,.14)';g.fillRect(0,122,128,6);
+  facadeCache.set(key,canvas);return canvas;
+}
+function closedRing(ring){const out=ring.slice(),a=out[0],b=out[out.length-1];if(a[0]!==b[0]||a[1]!==b[1])out.push(a);return out;}
+function ringLength(ring){let total=0;for(let i=1;i<ring.length;i++){const dx=(ring[i][0]-ring[i-1][0])*111320*Math.cos(radians(ring[i][1])),dy=(ring[i][1]-ring[i-1][1])*111320;total+=Math.hypot(dx,dy);}return total;}
+function addPlainBuilding(item){
+  buildingSource.entities.add({id:item.id,name:item.name,polygon:{hierarchy:footprintPositions(item.footprint),height:0,extrudedHeight:item.height_m,perPositionHeight:false,heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,extrudedHeightReference:Cesium.HeightReference.RELATIVE_TO_GROUND,material:Cesium.Color.fromCssColorString('#8ca4ae').withAlpha(.72),outline:false}});
+}
+function buildTexturedEntities(item,base,roof){
+  const ring=closedRing(item.footprint),style=buildingStyle(item),color=roof?roof.color:[150,155,160];
+  const min=Number(item.min_height_m)||0,bottom=base+min-(min>0?0:4),top=base+item.height_m;
+  const [bay,floorHeight]=BAYS[style],repeat=new Cesium.Cartesian2(Math.max(1,Math.round(ringLength(ring)/bay)),Math.max(1,Math.round((top-bottom)/floorHeight)));
+  buildingSource.entities.add({id:`${item.id}-walls`,name:item.name,wall:{positions:Cesium.Cartesian3.fromDegreesArray(ring.flat()),minimumHeights:new Array(ring.length).fill(bottom),maximumHeights:new Array(ring.length).fill(top),material:new Cesium.ImageMaterialProperty({image:facadeCanvas(style,color),repeat})}});
+  buildingSource.entities.add({id:`${item.id}-roof`,name:item.name,polygon:{hierarchy:footprintPositions(item.footprint),height:top+.05,material:roof?new Cesium.ImageMaterialProperty({image:roof.canvas}):Cesium.Color.fromBytes(color[0],color[1],color[2]),outline:false}});
+}
+async function processBuildings(epoch,items){
+  let bases=items.map(()=>0);
+  if(hasIon){try{const samples=await Cesium.sampleTerrainMostDetailed(viewer.scene.terrainProvider,items.map((item)=>new Cesium.Cartographic(radians(item.lon),radians(item.lat))));bases=samples.map((p)=>Number.isFinite(p.height)?p.height:0);}catch(_){}}
+  if(epoch!==buildingEpoch)return;
+  let next=0;
+  const worker=async()=>{
+    while(next<items.length){
+      const index=next++;if(epoch!==buildingEpoch)return;
+      let roof=null;try{roof=await roofImage(items[index]);}catch(_){}
+      if(epoch!==buildingEpoch)return;
+      buildTexturedEntities(items[index],bases[index],roof);
+    }
+  };
+  await Promise.all(Array.from({length:6},worker));
+}
+window.skylineAddBuilding=function(item){
+  if(buildingIndex++>=TEXTURED_BUILDINGS){addPlainBuilding(item);return;}
+  pendingBuildings.push(item);
+  if(flushScheduled)return;
+  flushScheduled=true;
+  setTimeout(()=>{flushScheduled=false;const items=pendingBuildings;pendingBuildings=[];processBuildings(buildingEpoch,items);},0);
+};
+
+/* ---------- start the session on a runway ---------- */
+(async()=>{
+  while(!aircraft||!catalog||document.getElementById('loading'))await sleep(150);
+  try{await jumpToAirport({ident:'KSEA',name:'Seattle-Tacoma International Airport',lat:47.4489,lon:-122.3094,elevation_ft:433});}catch(_){}
+  flight.hold=false;
+})();
+}
+
+/* <<< SKYLINE_EXT_END */
+  })();
+  </script>
+</body>
+</html>
